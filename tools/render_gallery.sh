@@ -15,6 +15,14 @@ SIZE="1200,800"
 
 render() {           # render <name> <camera-rot> <size> <scad-body>
     name=$1; rot=$2; size=$3; body=$4
+    # OpenSCAD reads six --camera numbers as eye+centre and seven as
+    # translation+rotation+distance. We always pass the second form, so the
+    # rotation has to be four numbers (rx,ry,rz,dist) — three silently gives
+    # a nonsense frame instead of an error.
+    case $(echo "$rot" | tr -cd , | wc -c) in
+        3) ;;
+        *) echo "  $name: camera needs rx,ry,rz,dist — got '$rot'"; return 1 ;;
+    esac
     printf 'include <%s/organizer.scad>\n%s\n' "$PWD" "$body" > "$TMP/s.scad"
     # --render forces a full CGAL render; without it OpenSCAD draws the CSG
     # preview and shows subtracted faces in a highlight colour.
@@ -72,6 +80,19 @@ projection(cut = true) translate([0, 0, -8]) {
         drawer(2, 2, h = 34.66, layout_dir = "rows",
                layout = [[1,[1,1]], [1,[1]], [1,[1,1,1]]]);
 }'
+
+# 3d. Label pocket on the drawer front, with plates
+render labels "62,0,18,0" "$SIZE" '
+lay   = layout_or_grid(undef, "cols", 3, 2);
+cards = label_card_spans(lay, "cols", drawer_inner_w(2), drawer_front_w(2),
+                         DRAWER_DIV_T);
+h     = label_window_h(34.66);
+drawer(2, 2, h = 34.66, cols = 3, rows = 2, label_pocket = true);
+for (i = [0, 2])
+    translate([(cards[i][0]+cards[i][1])/2, 0, LABEL_SHELF_SLOT + h/2])
+        rotate([90, 0, 0])
+            label_plate(i == 0 ? "10k" : "1M", cards[i][1]-cards[i][0], h);
+translate([-24, -62, 0]) label_plate("100k", cards[1][1]-cards[1][0], h);'
 
 # 4. Box with drawers and an open bin
 render box_bin "$ISO" "$SIZE" '

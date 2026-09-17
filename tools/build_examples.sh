@@ -29,6 +29,8 @@ build drawer_2x2x2_3compartments    'drawer(2, 2, h = 34.86, cols = 3);'
 build drawer_2x2x2_15compartments   'drawer(2, 2, h = 34.86, cols = 5, rows = 3, div_t = 1.20);'
 build drawer_2x2x1_mixed_layout     'drawer(2, 2, h = 16.20, layout = [[1,[1,1]],[2,[1]],[1,[1,2,1]]]);'
 build drawer_2x2x1_mixed_bands      'drawer(2, 2, h = 16.20, layout = [[1,[1,1]],[1,[1]],[1,[1,1,1]]], layout_dir = "rows");'
+build drawer_2x2x1_label_pocket     'drawer(2, 2, h = 16.20, cols = 3, rows = 2, label_pocket = true);'
+build label_plates_2x2x1_3x         'label_plates(["10k", "4k7", "220R"], 2, 16.20, undef, "cols", 3, 2, 1.92);'
 
 # Connector clips
 build connector        'connector();'

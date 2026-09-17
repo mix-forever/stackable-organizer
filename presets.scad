@@ -13,7 +13,7 @@ include <organizer.scad>
 
 /* [What to generate] */
 // Part to build
-part = "demo"; // [demo:Preview — box with drawers, box:Box with drawer slots, box_bin:Box with drawers and open bin, drawer:Drawer, connector:Connector clip, connector_tolerant:Connector clip (loose fit)]
+part = "demo"; // [demo:Preview — box with drawers, box:Box with drawer slots, box_bin:Box with drawers and open bin, drawer:Drawer, label:Label plates for the drawer pocket, connector:Connector clip, connector_tolerant:Connector clip (loose fit)]
 
 /* [Size] */
 // Width, in grid units of 73.06 mm
@@ -41,10 +41,24 @@ compartments_deep = 2;    // [1:1:6]
 divider_thickness = 1.92;
 // Pull handle under the drawer front
 handle = true;
+// Label pocket on the drawer front: two ribs and a shelf, one window per
+// column of compartments. A card or a printed plate slides in from above.
+label_pocket = false;
 // For compartments that are NOT all the same, leave the two settings above
 // alone and edit `drawer_layout` further down this file — the Customizer
 // cannot show a list of lists, so it lives in the text.
 
+
+/* [Label plates] */
+// Plates that slide into the pocket. Printed flat, with the text raised by one
+// layer, so a filament change at that layer prints the lettering in a second
+// colour. Set part = "label" to generate them; they take their size from the
+// drawer settings above. The texts are a list, so they live further down the
+// file — the Customizer cannot show a list of strings.
+// Text height in mm. 0 = size it to the plate.
+label_text_size = 0;
+// Font. Leave empty for the OpenSCAD default.
+label_font = "";
 
 /* [Connector slots] */
 // Put slots on every grid unit, so any box can clip anywhere on the grid.
@@ -100,6 +114,12 @@ drawer_layout = [];
 //   drawer_layout_dir = "rows";   // 3 bands: 2 columns, none, 3 columns
 drawer_layout_dir = "cols";
 
+// ─── What the label plates say ──────────────────────────────────────────────
+// One entry per plate, laid out in a row ready to print. Each plate is sized
+// to the window it belongs to; with more texts than windows the list simply
+// wraps around, which is what you want when several drawers share a layout.
+label_texts = ["10k", "100k", "1M"];
+
 // Effective bin height: given, or half the box.
 bin_height_eff = bin_height > 0 ? bin_height : height_units * UNIT_H / 2;
 
@@ -108,6 +128,9 @@ slot_clear_h = pocket_height_of(height_units, drawer_slots);
 drawer_h     = drawer_height_mm > 0 ? drawer_height_mm
                                     : drawer_height_of(height_units, drawer_slots);
 
+if (part == "label")
+    echo(str("label plates: ", len(label_texts), ", each ",
+             label_window_h(drawer_h), " mm tall"));
 if (part == "demo" || part == "box" || part == "drawer")
     echo(str("drawer slots: ", drawer_slots, "   slot clearance: ", slot_clear_h,
              " mm   drawer height: ", drawer_h, " mm"));
@@ -128,7 +151,7 @@ else if (part == "drawer")
     drawer(width_units, depth_units, cols = compartments_across,
            rows = compartments_deep, div_t = divider_thickness,
            h = drawer_h, handle = handle, layout = drawer_layout,
-           layout_dir = drawer_layout_dir);
+           layout_dir = drawer_layout_dir, label_pocket = label_pocket);
 else if (part == "box_bin")
     box_drawer_bin(width_units, depth_units, height_units,
                    bin_drawer_slots > 0 ? 1 : 0,   // unused when shelf_z given
@@ -144,6 +167,10 @@ else if (part == "box_bin")
                        : undef,
                    bin_front_flush,
                    bin_roof == "yes" ? true : bin_roof == "no" ? false : undef);
+else if (part == "label")
+    label_plates(label_texts, width_units, drawer_h, drawer_layout,
+                 drawer_layout_dir, compartments_across, compartments_deep,
+                 divider_thickness, label_text_size, label_font);
 else if (part == "connector")            connector();
 else if (part == "connector_tolerant")   connector(true);
 else if (part == "demo")                 demo_box_with_drawers();
@@ -160,5 +187,6 @@ module demo_box_with_drawers() {
             drawer(width_units, depth_units, h = drawer_h,
                    cols = compartments_across, rows = compartments_deep,
                    div_t = divider_thickness, handle = handle,
-                   layout = drawer_layout, layout_dir = drawer_layout_dir);
+                   layout = drawer_layout, layout_dir = drawer_layout_dir,
+                   label_pocket = label_pocket);
 }

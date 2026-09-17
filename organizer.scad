@@ -240,6 +240,12 @@ module drawer_notches(cw, bl, bh) {
             cube([DRAWER_NOTCH_W, bl + 2*EPS, DRAWER_NOTCH_DEPTH + EPS]);
 }
 
+// Drawer dimensions that other parts need too — the label plates have to know
+// how wide a pocket window is without building a drawer first.
+function drawer_front_w(ul) = ul * UNIT_L - 2 * FRONT_RING - 2 * DRAWER_CLEAR_SIDE;
+function drawer_body_w(ul)  = ul * UNIT_L - 2 * WALL_SIDE  - 2 * DRAWER_CLEAR_SIDE;
+function drawer_inner_w(ul) = drawer_body_w(ul) - 2 * DRAWER_WALL;
+
 // Layout entries: a column is [width weight, [row weights]], and a plain
 // number n is shorthand for a column of standard width split into n equal
 // rows. These two functions expand either form.
@@ -254,6 +260,13 @@ function wsum(v, i = 0) = i >= len(v) ? 0 : v[i] + wsum(v, i + 1);
 function share(w, i, space) = space * w[i] / wsum(w);
 function offset_of(w, i, space, t, k = 0) =
     k >= i ? 0 : share(w, k, space) + t + offset_of(w, i, space, t, k + 1);
+
+// The layout actually used: the given one, or a plain grid built from
+// cols x rows (swapped when the layout is read as bands).
+function layout_or_grid(layout, dir, cols, rows) =
+    is_undef(layout) || len(layout) == 0
+        ? (dir == "rows" ? grid_layout(rows, cols) : grid_layout(cols, rows))
+        : layout;
 
 // cols x rows as a layout, so the module has a single code path.
 function grid_layout(major, minor) =
@@ -364,26 +377,24 @@ module drawer_dividers(lay, dir, cw, cl, cy0, cz, bh, bl,
 module drawer(ul = 2, ud = 2, pocket_h = POCKET_H, cols = 1, rows = 1,
               handle = true, div_t = DRAWER_DIV_T,
               div_t_rows = undef, div_rows_drop = 0, h = undef,
-              notch = true, layout = undef, layout_dir = "cols") {
+              notch = true, layout = undef, layout_dir = "cols",
+              label_pocket = false) {
     dtr = is_undef(div_t_rows) ? div_t : div_t_rows;
     assert(layout_dir == "cols" || layout_dir == "rows",
            "layout_dir has to be \"cols\" or \"rows\"");
-    lay = is_undef(layout) || len(layout) == 0
-              ? (layout_dir == "rows" ? grid_layout(rows, cols)
-                                      : grid_layout(cols, rows))
-              : layout;
+    lay = layout_or_grid(layout, layout_dir, cols, rows);
     assert(min([for (c = lay) col_weight(c)]) > 0,
            "layout: every column needs a width weight above 0");
     assert(min([for (c = lay) min(col_rows(c))]) > 0,
            "layout: every row weight has to be above 0");
-    fw = ul * UNIT_L - 2 * FRONT_RING - 2 * DRAWER_CLEAR_SIDE;  // flange width
-    bw = ul * UNIT_L - 2 * WALL_SIDE  - 2 * DRAWER_CLEAR_SIDE;  // body width
+    fw = drawer_front_w(ul);                                    // flange width
+    bw = drawer_body_w(ul);                                     // body width
     // Flange height: given directly (`h`), or slot clearance minus tolerance.
     fh = is_undef(h) ? pocket_h - DRAWER_CLEARANCE_H : h;
     bh = fh - DRAWER_TOP_DROP;                                  // wall height
     bl = ud * UNIT_D - DRAWER_BACK_INSET;                       // body length
 
-    cw  = bw - 2 * DRAWER_WALL;          // interior width
+    cw  = drawer_inner_w(ul);            // interior width
     cy0 = DRAWER_WALL;                   // interior starts behind the front wall
     cl  = bl - 2 * DRAWER_WALL;          // interior length
     cz  = DRAWER_FLOOR;                  // interior floor level
@@ -415,6 +426,10 @@ module drawer(ul = 2, ud = 2, pocket_h = POCKET_H, cols = 1, rows = 1,
         // Dividers — see drawer_dividers() above for how a layout is read.
         drawer_dividers(lay, layout_dir, cw, cl, cy0, cz, bh, bl,
                         div_t, dtr, div_rows_drop, notch);
+
+        // Label pocket on the front face, one window per column.
+        if (label_pocket)
+            front_label_pocket(lay, layout_dir, cw, fw, fh, div_t);
 
         // bottom handle with the thickened tip
         if (handle) {
@@ -604,4 +619,133 @@ module bin_ramp(w, z_floor, lip_h = BIN_LIP_H) {
         polygon([[-z_floor, BIN_LIP_T],
                  [-(z_floor + lip_h), BIN_LIP_T],
                  [-z_floor, BIN_LIP_T + lip_h]]);
+}
+
+// ─── Label pocket and label plates ───────────────────────────────────────────
+// The pocket is two ribs and a shelf standing proud of the drawer front, one
+// window per column of compartments — a card or a printed plate slides in from
+// above. Measured off the original design; see LABEL_* in params.scad.
+
+// Weights of the columns that meet the front face. Read as columns, that is
+// the layout itself; read as bands, it is the columns of the front band.
+function front_col_weights(lay, dir) =
+    dir == "rows" ? col_rows(lay[0]) : [for (c = lay) col_weight(c)];
+
+// Left and right edge of column i, in drawer coordinates.
+function front_col_span(w, i, cw, t) =
+    let (space = cw - (len(w) - 1) * t,
+         x0 = -cw/2 + offset_of(w, i, space, t))
+    [x0, x0 + share(w, i, space)];
+
+// The windows of the pocket as [x0, x1] pairs: the pocket spans the front face
+// (minus LABEL_EDGE_INSET), and the ribs sit over the dividers.
+function label_windows(lay, dir, cw, fw, div_t) =
+    let (w = front_col_weights(lay, dir), n = len(w))
+    [for (i = [0 : n - 1])
+        [i == 0     ? -fw/2 + LABEL_EDGE_INSET + LABEL_RIB_W
+                    : front_col_span(w, i, cw, div_t)[0] - div_t/2 + LABEL_RIB_MID,
+         i == n - 1 ?  fw/2 - LABEL_EDGE_INSET - LABEL_RIB_W
+                    : front_col_span(w, i, cw, div_t)[1] + div_t/2 - LABEL_RIB_MID]];
+
+// The cards themselves: wider than the windows, so the ribs hold them in.
+function label_card_spans(lay, dir, cw, fw, div_t) =
+    [for (w = label_windows(lay, dir, cw, fw, div_t))
+        [w[0] - LABEL_CARD_OVER, w[1] + LABEL_CARD_OVER]];
+
+// Height of a card: from the shelf it rests on to the top of the ribs.
+function label_window_h(fh) = fh - LABEL_TOP_DROP - LABEL_SHELF_SLOT;
+
+module front_label_pocket(lay, dir, cw, fw, fh, div_t) {
+    wins = label_windows(lay, dir, cw, fw, div_t);
+    L    = -fw/2 + LABEL_EDGE_INSET;
+    R    =  fw/2 - LABEL_EDGE_INSET;
+    top  = fh - LABEL_TOP_DROP;
+    assert(top > LABEL_SHELF_Z1 + 2,
+           "label_pocket: the drawer front is too low for a label pocket");
+
+    // The slot layer, right against the front face: a low shelf for the card
+    // to stand on, and the walls that separate one card from the next.
+    cards = label_card_spans(lay, dir, cw, fw, div_t);
+    translate([0, -LABEL_SLOT, 0]) {
+        translate([L, 0, LABEL_SHELF_Z0])
+            cube([R - L, LABEL_SLOT, LABEL_SHELF_SLOT - LABEL_SHELF_Z0]);
+        for (i = [0 : len(cards)]) {
+            x0 = i == 0          ? L : cards[i-1][1];
+            x1 = i == len(cards) ? R : cards[i][0];
+            if (x1 - x0 > EPS)
+                translate([x0, 0, LABEL_SHELF_Z0])
+                    cube([x1 - x0, LABEL_SLOT, top - LABEL_SHELF_Z0]);
+        }
+    }
+
+    // The rail layer, LABEL_SLOT in front of the face: shelf, ribs, braces.
+    translate([0, -(LABEL_SLOT + LABEL_RAIL_T), 0]) {
+        // shelf, right across the pocket
+        translate([L, 0, LABEL_SHELF_Z0])
+            cube([R - L, LABEL_RAIL_T, LABEL_SHELF_Z1 - LABEL_SHELF_Z0]);
+
+        // ribs: the outer two and one block between each pair of windows
+        for (i = [0 : len(wins)]) {
+            x0 = i == 0           ? L : wins[i-1][1];
+            x1 = i == len(wins)   ? R : wins[i][0];
+            translate([x0, 0, LABEL_SHELF_Z0])
+                cube([x1 - x0, LABEL_RAIL_T, top - LABEL_SHELF_Z0]);
+        }
+
+        // braces in the lower corners of every window
+        for (win = wins) {
+            label_gusset(win[0],  1);
+            label_gusset(win[1], -1);
+        }
+    }
+}
+
+// A 45° brace from the shelf up into a rib, in the plane of the pocket.
+module label_gusset(x, s) {
+    translate([x, LABEL_RAIL_T, LABEL_SHELF_Z1]) rotate([90, 0, 0])
+        linear_extrude(height = LABEL_RAIL_T)
+            polygon([[0, 0], [s * LABEL_GUSSET, 0], [0, LABEL_GUSSET]]);
+}
+
+// One plate, lying flat with the text facing up — print it as generated.
+// `size` 0 sizes the text to the plate; `font` "" uses OpenSCAD's default.
+module label_plate(txt, w, h, size = 0, font = "") {
+    t    = LABEL_SLOT - LABEL_PLATE_CLEAR;
+    base = t - LABEL_TEXT_H;
+    pw   = w - 2 * LABEL_PLATE_SIDE;
+    ph   = h - 2 * LABEL_PLATE_SIDE;
+    assert(pw > 2 && ph > 2, "label_plate: the window is too small for a plate");
+    n    = max(len(txt), 1);
+    // The notch eats into the top edge, so the text is centred on what is
+    // left below it — otherwise it clips the lettering on a short plate.
+    r    = min(LABEL_NOTCH_R, ph / 4);
+    s    = size > 0 ? size : min((ph - r) * 0.6, pw / n / 0.62);
+    difference() {
+        union() {
+            translate([-pw/2, -ph/2, 0]) cube([pw, ph, base]);
+            translate([0, -r/2, base - EPS]) linear_extrude(LABEL_TEXT_H + EPS)
+                text(txt, size = s, halign = "center", valign = "center",
+                     font = font == "" ? undef : font);
+        }
+        // finger notch in the top edge, to pull the plate back out
+        translate([0, ph/2, -EPS])
+            cylinder(r = r, h = t + 2*EPS, $fn = 32);
+    }
+}
+
+// A row of plates, ready to print in one go. Each plate takes the size of the
+// window it belongs to; more texts than windows simply wrap around.
+module label_plates(texts, ul = 2, fh = POCKET_H - DRAWER_CLEARANCE_H,
+                    layout = undef, layout_dir = "cols", cols = 1, rows = 1,
+                    div_t = DRAWER_DIV_T, size = 0, font = "") {
+    lay  = layout_or_grid(layout, layout_dir, cols, rows);
+    cards = label_card_spans(lay, layout_dir, drawer_inner_w(ul),
+                             drawer_front_w(ul), div_t);
+    h     = label_window_h(fh);
+    for (i = [0 : len(texts) - 1]) {
+        win = cards[i % len(cards)];
+        w   = win[1] - win[0];
+        translate([i * (w + LABEL_PLATE_GAP), 0, 0])
+            label_plate(texts[i], w, h, size, font);
+    }
 }

@@ -41,7 +41,7 @@ and **commercial use is not permitted**.
 | ![Box sizes](images/box_sizes.png) **Boxes** — 1×1×1, 2×2×1 and 3×2×2 | ![Drawer layouts](images/drawer_types.png) **Drawers** — 1, 3, 6 and 15 compartments |
 | ![Mixed compartments](images/drawer_layouts.png) **Mixed compartments** — a different split per column | ![Box with a bin](images/box_bin.png) **Drawers plus an open bin** |
 | ![Bin variants](images/bin_variants.png) **Deep bin with a roof vs. shallow open shelf** | ![Drawer slot cutaway](images/box_interior.png) **Inside a slot** — rails and the anti-fallout catches |
-| ![Two boxes joined](images/stacking.png) **Two boxes joined** with connector clips | |
+| ![Two boxes joined](images/stacking.png) **Two boxes joined** with connector clips | ![Label pocket](images/labels.png) **Label pocket** — printed plates slide in |
 
 ![Connector clips](images/connector.png)
 
@@ -166,6 +166,40 @@ running front to back are not — so the drawer still closes.
 `[[1,[1,1]], [1,[1]], [1,[1,1,1]]]` read as bands. The drawer front — the
 handle end — is at the bottom.*
 
+#### Label pocket and printed plates
+
+Set **`label_pocket`** and the drawer front grows the pocket the original
+design has: two ribs and a shelf standing 1.76 mm proud of the face, with one
+window per column of compartments. A card slides in from above — a strip of
+paper, or a plate printed from this same library.
+
+![Label pocket with plates](images/labels.png)
+
+Set `part = "label"` to generate the plates. They take their size from the
+drawer settings, and the texts come from **`label_texts`** further down
+`presets.scad` (a list of strings, which the Customizer cannot show):
+
+```scad
+label_texts = ["10k", "4k7", "220R"];
+```
+
+The plates come out laid in a row, flat, ready to print as generated. The
+lettering is **raised by 0.20 mm — exactly one layer at 0.2 mm**, so a filament
+change at the top layer prints the text in a second colour. On a printer with
+an AMS or MMU that is a single job for a whole set of labels; on a single
+filament printer the raised letters still read fine.
+
+| | |
+|---|---|
+| Slot in the pocket | 0.80 mm |
+| Plate | 0.60 mm — 0.40 base plus 0.20 of lettering |
+| Clearance | 0.20 mm in thickness, 0.30 mm per side |
+| Text size | fitted to the plate, or set `label_text_size` |
+
+Each plate has a small notch in its top edge, to pull it back out with a
+fingernail. `label_font` takes any font name your OpenSCAD knows; leave it
+empty for the default.
+
 ### Connector slots
 
 | Parameter | Meaning |
@@ -254,6 +288,7 @@ they fit boxes you have already printed:
 | Slot length | 46.80 mm from the back face |
 | Clip | 44.80 mm long, 3.20 mm thick — one clip fills the slots of two boxes |
 | Divider notches | 7.00 mm in from each side wall, 3.00 mm deep |
+| Label pocket | stands 1.76 mm proud of the front, 0.80 mm slot, card held 1.54 mm behind each rib |
 
 That last one matters: the box has anti-fallout catches hanging below every
 rail, and they reach inboard past the drawer's inner wall face. A divider

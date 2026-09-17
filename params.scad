@@ -223,3 +223,29 @@ function arc_center(p1, p2, r) =
          h  = sqrt(max(0, r*r - L*L/4)),
          nn = [-d[1]/L, d[0]/L])
     [(p1[0]+p2[0])/2 + h*nn[0], (p1[1]+p2[1])/2 + h*nn[1]];
+
+// ─── Label pocket on the drawer front ────────────────────────────────────────
+// Two side ribs and a shelf standing proud of the front face; a paper card or
+// a printed plate slides in from above. One window per column of compartments.
+LABEL_SLOT       = 0.80;   // gap between the front face and the rail
+LABEL_RAIL_T     = 0.96;   // rail thickness — the pocket stands 1.76 proud
+LABEL_EDGE_INSET = 1.50;   // pocket edge, inside the edge of the front
+LABEL_RIB_W      = 2.50;   // rib at the outer ends
+LABEL_RIB_MID    = 2.81;   // rib on each side of the boundary between windows
+LABEL_SHELF_Z0   = 2.16;   // shelf bottom, above the bottom of the front
+LABEL_SHELF_Z1   = 4.00;   // shelf top — a card rests here
+LABEL_TOP_DROP   = 1.50;   // rib top, below the top of the front
+LABEL_GUSSET     = 2.00;   // triangular brace between the shelf and the ribs
+LABEL_CARD_OVER  = 1.54;   // how far the ribs overlap the card that is in the
+                           // slot — the card is wider than the window it shows
+                           // through, which is what keeps it from falling out
+LABEL_SHELF_SLOT = 2.46;   // shelf top inside the slot; the card rests here
+
+// ─── Label plate — the part that slides into the pocket ──────────────────────
+// Printed flat, text raised by one layer so a second filament can take over at
+// that layer and print the lettering in another colour.
+LABEL_PLATE_CLEAR = 0.20;  // thinner than the slot
+LABEL_PLATE_SIDE  = 0.30;  // clearance per side inside the window
+LABEL_TEXT_H      = 0.20;  // raised text height — one layer at 0.2 mm
+LABEL_NOTCH_R     = 3.00;  // finger notch in the top edge
+LABEL_PLATE_GAP   = 4.00;  // spacing when plates are laid out in a row
