@@ -242,10 +242,15 @@ LABEL_CARD_OVER  = 1.54;   // how far the ribs overlap the card that is in the
 LABEL_SHELF_SLOT = 2.46;   // shelf top inside the slot; the card rests here
 
 // ─── Label plate — the part that slides into the pocket ──────────────────────
-// Printed flat, text raised by one layer so a second filament can take over at
-// that layer and print the lettering in another colour.
+// Printed flat, for multi-material printing: the lettering is inlaid into the
+// face, not raised, so the base and the text sit side by side in the same
+// layers. Two parts come out of the same 2D outline — the plate with the
+// letters cut out of it, and the letters themselves — and the slicer prints
+// them as one object with two filaments. No clearance between them on purpose:
+// the boolean happens in the slicer, so the outlines have to match exactly.
 LABEL_PLATE_CLEAR = 0.20;  // thinner than the slot
 LABEL_PLATE_SIDE  = 0.30;  // clearance per side inside the window
-LABEL_TEXT_H      = 0.20;  // raised text height — one layer at 0.2 mm
+LABEL_PLATE_BACK  = 0.20;  // solid backing under the inlay — one layer at 0.2
+LABEL_TEXT_D      = 0.40;  // inlay depth: plate thickness minus the backing
 LABEL_NOTCH_R     = 3.00;  // finger notch in the top edge
 LABEL_PLATE_GAP   = 4.00;  // spacing when plates are laid out in a row

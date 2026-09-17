@@ -171,9 +171,10 @@ module in_pocket(dy, sx, sz) {
     for (cd = cards)
         translate([(cd[0]+cd[1])/2, dy, LABEL_SHELF_SLOT + hh/2])
             scale([sx, 1, sz]) rotate([90, 0, 0])
-                label_plate("10k", cd[1]-cd[0], hh);
+                whole_plate(cd[1]-cd[0], hh);
 }
-module pocket_drawer() { drawer(2, 2, h = 34.66, cols = 3, rows = 2, label_pocket = true); }'
+module pocket_drawer() { drawer(2, 2, h = 34.66, cols = 3, rows = 2, label_pocket = true); }
+module whole_plate(w, h) { label_plate("10k", w, h); label_plate_text("10k", w, h); }'
 
 check "  plate in the pocket" "
 $PLATE
@@ -192,6 +193,22 @@ for c in "0,1.05,1:5% too wide" "0,1,1.5:50% too thick" "-0.5,1,1:pushed forward
     v=$(vol "$TMP/o.stl")
     case "$v" in 0|0.0) echo "THIS CASE TESTS NOTHING"; fail=1 ;; *) echo "OK (collides, $v mm3)" ;; esac
 done
+
+# The two parts of a plate have to meet exactly: nothing shared between them,
+# and nothing missing where they join. The slicer does the boolean, so an
+# outline that drifted apart would show up as a gap in the print.
+check "  plate and lettering do not overlap" '
+intersection() {
+    label_plate("10k", 43.8, 30.7);
+    label_plate_text("10k", 43.8, 30.7);
+}'
+printf '%-54s' "  plate and lettering add up to a full plate"
+printf 'include <%s/organizer.scad>\ndifference() {\n  difference() { translate([-label_plate_w(43.8)/2, -label_plate_h(30.7)/2, 0]) cube([label_plate_w(43.8), label_plate_h(30.7), LABEL_SLOT-LABEL_PLATE_CLEAR]); label_plate_notch(30.7, LABEL_SLOT-LABEL_PLATE_CLEAR); }\n  union() { label_plate("10k", 43.8, 30.7); label_plate_text("10k", 43.8, 30.7); }\n}\n' "$PWD" > "$TMP/g.scad"
+rm -f "$TMP/o.stl"
+openscad -o "$TMP/o.stl" "$TMP/g.scad" 2>&1 | grep -E '^ERROR' && fail=1
+v=$(vol "$TMP/o.stl")
+if [ "$v" = "0" ] || [ "$v" = "0.0" ]; then echo "OK (nothing missing)"
+else echo "GAP $v mm3"; fail=1; fi
 
 echo
 [ "$fail" -eq 0 ] && echo "all clear" || echo "THERE ARE COLLISIONS"

@@ -206,30 +206,50 @@ paper, or a plate printed from this same library.
 
 ![Label pocket with plates](images/labels.png)
 
-Set `part = "label"` to generate the plates. They take their size from the
-drawer settings, and the texts come from **`label_texts`** further down
-`presets.scad` (a list of strings, which the Customizer cannot show):
+The texts come from **`label_texts`** further down `presets.scad` (a list of
+strings, which the Customizer cannot show):
 
 ```scad
 label_texts = ["10k", "4k7", "220R"];
 ```
 
-The plates come out laid in a row, flat, ready to print as generated. The
-lettering is **raised by 0.20 mm — exactly one layer at 0.2 mm**, so a filament
-change at the top layer prints the text in a second colour. On a printer with
-an AMS or MMU that is a single job for a whole set of labels; on a single
-filament printer the raised letters still read fine.
+The plates come out laid in a row, flat, ready to print as generated. They are
+built for **two-material printing**: the lettering is inlaid into the face, not
+raised on top of it, so the text and the plate print side by side in the same
+layers. That means two parts, cut from one and the same outline:
+
+| `part` | What you get |
+|---|---|
+| `label` | the plates, with the letters cut out of the face |
+| `label_text` | the lettering that fills those cut-outs |
+
+Export both, then in your slicer (Bambu Studio, PrusaSlicer, OrcaSlicer) load
+them **together as one object with multiple parts** — Bambu Studio offers this
+as *“load as a single object with multiple parts?”*, and elsewhere you select
+both and assemble them. They share one coordinate system, so the letters land
+where they belong. Assign the plate one filament and the lettering another,
+and print the row in one go.
+
+There is deliberately **no clearance between the two parts** — the outlines
+match exactly, and the slicer resolves the boundary. That is checked, not
+assumed: `tools/check_fit.sh` fails if the two parts ever overlap or stop
+adding up to a full plate.
 
 | | |
 |---|---|
 | Slot in the pocket | 0.80 mm |
-| Plate | 0.60 mm — 0.40 base plus 0.20 of lettering |
-| Clearance | 0.20 mm in thickness, 0.30 mm per side |
+| Plate | 0.60 mm — 0.20 of backing plus 0.40 of inlaid lettering |
+| Clearance to the pocket | 0.20 mm in thickness, 0.30 mm per side |
 | Text size | fitted to the plate, or set `label_text_size` |
 
-Each plate has a small notch in its top edge, to pull it back out with a
-fingernail. `label_font` takes any font name your OpenSCAD knows; leave it
-empty for the default.
+The backing means the first layer is all plate, and the two layers above it
+carry both colours — so the counters of letters like **0** and **4** stay
+attached instead of floating free. Each plate has a small notch in its top
+edge, to pull it back out with a fingernail. `label_font` takes any font name
+your OpenSCAD knows; leave it empty for the default.
+
+Printing a single colour works too: the letters are then simply a 0.40 mm
+recess in the face.
 
 ### Connector slots
 

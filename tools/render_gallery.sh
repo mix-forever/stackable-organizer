@@ -101,7 +101,9 @@ for (i = [0, 2])
     translate([(cards[i][0]+cards[i][1])/2, 0, LABEL_SHELF_SLOT + h/2])
         rotate([90, 0, 0])
             label_plate(i == 0 ? "10k" : "1M", cards[i][1]-cards[i][0], h);
-translate([-24, -62, 0]) label_plate("100k", cards[1][1]-cards[1][0], h);'
+// the two parts a plate is printed from, side by side
+translate([-52, -62, 0]) label_plate("100k", cards[1][1]-cards[1][0], h);
+translate([0, -62, 0]) label_plate_text("100k", cards[1][1]-cards[1][0], h);'
 
 # 4. Box with drawers and an open bin
 render box_bin "$ISO" "$SIZE" '

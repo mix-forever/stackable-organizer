@@ -13,7 +13,7 @@ include <organizer.scad>
 
 /* [What to generate] */
 // Part to build
-part = "demo"; // [demo:Preview — box with drawers, box:Box with drawer slots, box_bin:Box with drawers and open bin, drawer:Drawer, label:Label plates for the drawer pocket, connector:Connector clip, connector_tolerant:Connector clip (loose fit)]
+part = "demo"; // [demo:Preview — box with drawers, box:Box with drawer slots, box_bin:Box with drawers and open bin, drawer:Drawer, label:Label plates — the plates, label_text:Label plates — the lettering, connector:Connector clip, connector_tolerant:Connector clip (loose fit)]
 
 /* [Size] */
 // Width, in grid units of 73.06 mm
@@ -53,11 +53,14 @@ label_pocket = false;
 
 
 /* [Label plates] */
-// Plates that slide into the pocket. Printed flat, with the text raised by one
-// layer, so a filament change at that layer prints the lettering in a second
-// colour. Set part = "label" to generate them; they take their size from the
-// drawer settings above. The texts are a list, so they live further down the
-// file — the Customizer cannot show a list of strings.
+// Plates that slide into the pocket, printed flat for two-material printing.
+// They come in two parts from the same outline: part = "label" is the plate
+// with the letters cut out of its face, part = "label_text" is the lettering
+// that fills them. Export both, load them into the slicer together as one
+// object with two parts, and give each its own filament — the letters then
+// print beside the plate in the same layers, not on top of it.
+// The plates take their size from the drawer settings above. The texts are a
+// list, so they live further down the file — the Customizer cannot show one.
 // Text height in mm. 0 = size it to the plate.
 label_text_size = 0;
 // Font. Leave empty for the OpenSCAD default.
@@ -146,9 +149,11 @@ slot_clear_h = slot_hs[slot_i];
 drawer_h     = drawer_height_mm > 0 ? drawer_height_mm
                                     : slot_clear_h - DRAWER_CLEARANCE_H;
 
-if (part == "label")
-    echo(str("label plates: ", len(label_texts), ", each ",
-             label_window_h(drawer_h), " mm tall"));
+if (part == "label" || part == "label_text")
+    echo(str(part == "label" ? "plates: " : "lettering for: ",
+             len(label_texts), " labels, each ", label_window_h(drawer_h),
+             " mm tall. Export both parts and load them into the slicer as ",
+             "one object with two parts."));
 if (part == "demo" || part == "box" || part == "drawer")
     echo(len(slot_hs) > 1 && min(slot_hs) < max(slot_hs) - 0.001
          ? str("slots (bottom to top): ", slot_hs,
@@ -193,10 +198,11 @@ else if (part == "box_bin")
                        : undef,
                    bin_front_flush,
                    bin_roof == "yes" ? true : bin_roof == "no" ? false : undef);
-else if (part == "label")
+else if (part == "label" || part == "label_text")
     label_plates(label_texts, width_units, drawer_h, drawer_layout,
                  drawer_layout_dir, compartments_across, compartments_deep,
-                 divider_thickness, label_text_size, label_font);
+                 divider_thickness, label_text_size, label_font,
+                 part == "label_text");
 else if (part == "connector")            connector();
 else if (part == "connector_tolerant")   connector(true);
 else if (part == "demo")                 demo_box_with_drawers();

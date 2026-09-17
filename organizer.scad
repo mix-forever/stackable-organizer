@@ -733,37 +733,68 @@ module label_gusset(x, s) {
             polygon([[0, 0], [s * LABEL_GUSSET, 0], [0, LABEL_GUSSET]]);
 }
 
-// One plate, lying flat with the text facing up — print it as generated.
-// `size` 0 sizes the text to the plate; `font` "" uses OpenSCAD's default.
+// Plate dimensions and text size, all from the window it has to fit.
+function label_plate_w(w) = w - 2 * LABEL_PLATE_SIDE;
+function label_plate_h(h) = h - 2 * LABEL_PLATE_SIDE;
+// The notch eats into the top edge, so the text is centred on what is left
+// below it — otherwise it clips the lettering on a short plate.
+function label_notch_r(h) = min(LABEL_NOTCH_R, label_plate_h(h) / 4);
+function label_text_size(txt, w, h, size = 0) =
+    size > 0 ? size
+             : min((label_plate_h(h) - label_notch_r(h)) * 0.6,
+                   label_plate_w(w) / max(len(txt), 1) / 0.62);
+
+// THE outline of the lettering — the single source of truth for both parts.
+// The plate has it cut out, the lettering part is built from it, so the two
+// meet exactly with nothing in between.
+module label_text_2d(txt, w, h, size = 0, font = "") {
+    translate([0, -label_notch_r(h) / 2])
+        text(txt, size = label_text_size(txt, w, h, size),
+             halign = "center", valign = "center",
+             font = font == "" ? undef : font);
+}
+
+// Part one: the plate, lying flat, with the letters cut out of its face.
 module label_plate(txt, w, h, size = 0, font = "") {
-    t    = LABEL_SLOT - LABEL_PLATE_CLEAR;
-    base = t - LABEL_TEXT_H;
-    pw   = w - 2 * LABEL_PLATE_SIDE;
-    ph   = h - 2 * LABEL_PLATE_SIDE;
+    t  = LABEL_SLOT - LABEL_PLATE_CLEAR;
+    pw = label_plate_w(w);
+    ph = label_plate_h(h);
     assert(pw > 2 && ph > 2, "label_plate: the window is too small for a plate");
-    n    = max(len(txt), 1);
-    // The notch eats into the top edge, so the text is centred on what is
-    // left below it — otherwise it clips the lettering on a short plate.
-    r    = min(LABEL_NOTCH_R, ph / 4);
-    s    = size > 0 ? size : min((ph - r) * 0.6, pw / n / 0.62);
     difference() {
-        union() {
-            translate([-pw/2, -ph/2, 0]) cube([pw, ph, base]);
-            translate([0, -r/2, base - EPS]) linear_extrude(LABEL_TEXT_H + EPS)
-                text(txt, size = s, halign = "center", valign = "center",
-                     font = font == "" ? undef : font);
-        }
-        // finger notch in the top edge, to pull the plate back out
-        translate([0, ph/2, -EPS])
-            cylinder(r = r, h = t + 2*EPS, $fn = 32);
+        translate([-pw/2, -ph/2, 0]) cube([pw, ph, t]);
+        translate([0, 0, LABEL_PLATE_BACK])
+            linear_extrude(LABEL_TEXT_D + EPS, convexity = 10)
+                label_text_2d(txt, w, h, size, font);
+        label_plate_notch(h, t);
     }
+}
+
+// Part two: the lettering that fills those recesses — the second filament.
+// Same coordinates as the plate, so the two parts drop into place together.
+module label_plate_text(txt, w, h, size = 0, font = "") {
+    t = LABEL_SLOT - LABEL_PLATE_CLEAR;
+    difference() {
+        translate([0, 0, LABEL_PLATE_BACK])
+            linear_extrude(LABEL_TEXT_D, convexity = 10)
+                label_text_2d(txt, w, h, size, font);
+        label_plate_notch(h, t);
+    }
+}
+
+// Finger notch in the top edge, to pull the plate back out.
+module label_plate_notch(h, t) {
+    translate([0, label_plate_h(h)/2, -EPS])
+        cylinder(r = label_notch_r(h), h = t + 2*EPS, $fn = 32);
 }
 
 // A row of plates, ready to print in one go. Each plate takes the size of the
 // window it belongs to; more texts than windows simply wrap around.
+// `letters` picks which of the two parts you get — export both and load them
+// into the slicer together as one object with two parts.
 module label_plates(texts, ul = 2, fh = POCKET_H - DRAWER_CLEARANCE_H,
                     layout = undef, layout_dir = "cols", cols = 1, rows = 1,
-                    div_t = DRAWER_DIV_T, size = 0, font = "") {
+                    div_t = DRAWER_DIV_T, size = 0, font = "",
+                    letters = false) {
     lay  = layout_or_grid(layout, layout_dir, cols, rows);
     cards = label_card_spans(lay, layout_dir, drawer_inner_w(ul),
                              drawer_front_w(ul), div_t);
@@ -772,6 +803,7 @@ module label_plates(texts, ul = 2, fh = POCKET_H - DRAWER_CLEARANCE_H,
         win = cards[i % len(cards)];
         w   = win[1] - win[0];
         translate([i * (w + LABEL_PLATE_GAP), 0, 0])
-            label_plate(texts[i], w, h, size, font);
+            if (letters) label_plate_text(texts[i], w, h, size, font);
+            else         label_plate(texts[i], w, h, size, font);
     }
 }

@@ -12,7 +12,7 @@ fail=0
 
 printf '%-44s %-9s %s\n' "tryb / modul" "status" "trojkatow"
 
-for pt in demo box box_bin drawer label connector connector_tolerant; do
+for pt in demo box box_bin drawer label label_text connector connector_tolerant; do
     out=$(openscad -D "part=\"$pt\"" -o "$TMP/t.stl" presets.scad 2>&1 \
           | grep -E '^(ERROR|WARNING)')
     n=$(grep -c "facet normal" "$TMP/t.stl" 2>/dev/null || echo 0)
