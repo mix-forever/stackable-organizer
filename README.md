@@ -79,7 +79,7 @@ Everything is set in `presets.scad`.
 
 | Parameter | Meaning |
 |---|---|
-| `part` | `demo`, `box`, `box_bin`, `drawer`, `connector`, `connector_tolerant` |
+| `part` | `demo`, `box`, `box_bin`, `drawer`, `label`, `label_text`, `connector`, `connector_tolerant` |
 
 ### Size
 
@@ -312,7 +312,7 @@ upper slots feel tight, raise `DRAWER_CLEARANCE_H` in `params.scad`
 | Path | What it is |
 |---|---|
 | `presets.scad` | **Open this.** All the settings live here. |
-| `organizer.scad` | The modules: `box()`, `drawer()`, `connector()`, `box_drawer_bin()` |
+| `organizer.scad` | The modules: `box()`, `drawer()`, `connector()`, `box_drawer_bin()`, `label_plate()` |
 | `params.scad` | Every dimension, in one place |
 | `stl/` | Ready-to-print examples |
 | `images/` | Gallery renders — rebuild with `tools/render_gallery.sh` |
@@ -361,3 +361,5 @@ and the console says so.
 - **Drawers one unit deep** need `drawer_height_mm` set explicitly.
 - The box edges are chamfered 1.5 mm top and bottom for support-free printing.
   Set `EDGE_CHAMFER = 0` in `params.scad` if you want square edges.
+- The **label pocket and the plates have not been test-printed yet** — the
+  geometry is checked, the print is not. Try one drawer before a whole set.
