@@ -1,5 +1,7 @@
 # Parametric Stackable Organizer
 
+[![checks](https://github.com/mix-forever/stackable-organizer/actions/workflows/checks.yml/badge.svg)](https://github.com/mix-forever/stackable-organizer/actions/workflows/checks.yml)
+
 Stackable drawer boxes for a workshop, generated to any size you need.
 Resistors, screws, connectors, beads — whatever comes in small quantities and
 has to stay sorted. Build a box, a drawer, an open bin or a connector clip on
@@ -297,6 +299,8 @@ upper slots feel tight, raise `DRAWER_CLEARANCE_H` in `params.scad`
 | `tools/build_examples.sh` | Rebuilds `stl/` |
 | `tools/render_gallery.sh` | Rebuilds `images/` |
 | `tools/check_presets.sh` | Builds every part, fails on errors, warnings or empty output |
+| `tools/check_fit.sh` | Checks the parts fit each other: a drawer in its slot, past the catches, a plate in its pocket |
+| `.github/workflows/` | The same two checks on every push, plus example STLs attached to each release |
 | `presets.json` | Customizer parameter sets |
 
 Anything you export yourself (`.stl`, `.3mf`, `.pdf`) lands in the top folder

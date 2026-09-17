@@ -1,0 +1,31 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install OpenSCAD
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends openscad
+
+      # Built from the tagged source, never from anyone's working copy.
+      - name: Build the example STLs
+        run: sh tools/build_examples.sh
+
+      - name: Pack them up
+        run: zip -j "stackable-organizer-${GITHUB_REF_NAME}-examples.zip" stl/*.stl
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: stackable-organizer-*-examples.zip
+          generate_release_notes: true
