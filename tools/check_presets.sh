@@ -38,6 +38,19 @@ for lay in '[[1,[1,1]],[2,[1]],[1,[1,2,1]]]:cols' '[2,1,3]:cols' \
     [ -n "$out" ] && echo "$out" | sed 's/^/      /'
 done
 
+# Kieszenie o roznych wysokosciach (slot_weights jest poza Customizerem).
+for pt in box demo drawer box_bin; do
+    out=$(openscad -D "part=\"$pt\"" -D 'slot_weights=[1,1,2]' \
+          -D height_units=2 -D drawer_for_slot=3 \
+          -o "$TMP/t.stl" presets.scad 2>&1 | grep -E '^(ERROR|WARNING)')
+    n=$(grep -c "facet normal" "$TMP/t.stl" 2>/dev/null || echo 0)
+    if   [ -n "$out" ];  then st=PROBLEM; fail=1
+    elif [ "$n" -lt 4 ]; then st=PUSTY;   fail=1
+    else st=OK; fi
+    printf '%-44s %-9s %s\n' "part=$pt slot_weights=[1,1,2]" "$st" "$n"
+    [ -n "$out" ] && echo "$out" | sed 's/^/      /'
+done
+
 for m in $(grep "^module " presets.scad | sed 's/module //;s/(.*//'); do
     # include musi wskazywac plik absolutnie — plik tymczasowy jest poza projektem
     echo "include <$PWD/presets.scad> $m();" > "$TMP/m.scad"

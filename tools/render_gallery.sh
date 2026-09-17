@@ -81,6 +81,15 @@ projection(cut = true) translate([0, 0, -8]) {
                layout = [[1,[1,1]], [1,[1]], [1,[1,1,1]]]);
 }'
 
+# 3c-bis. A box whose slots are not all the same height
+render mixed_slots "$ISO" "$SIZE" '
+hs = box_slot_heights(2, [1,1,2]);
+dh = drawer_heights_of(2, [1,1,2]);
+box(2, 2, 2, [1,1,2]);
+for (i = [0 : 2])
+    translate([UNIT_L, i == 0 ? -46 : 0, slot_bottom(hs, i)])
+        drawer(2, 2, h = dh[i], cols = 3, rows = i == 2 ? 2 : 1);'
+
 # 3d. Label pocket on the drawer front, with plates
 render labels "62,0,18,0" "$SIZE" '
 lay   = layout_or_grid(undef, "cols", 3, 2);

@@ -30,6 +30,9 @@ height_units = 1;  // [1, 2, 3, 4]
 drawer_slots = 4;  // [1:1:8]
 // Drawer height in mm. Leave 0 to derive it from the slot count (recommended).
 drawer_height_mm = 0;
+// Which slot the drawer is for, counted from the bottom. Only matters when the
+// slots have different heights — see slot_weights further down the file.
+drawer_for_slot = 1;  // [1:1:8]
 
 /* [Drawer] */
 // Number of compartments across the width
@@ -120,20 +123,40 @@ drawer_layout_dir = "cols";
 // wraps around, which is what you want when several drawers share a layout.
 label_texts = ["10k", "100k", "1M"];
 
+// ─── Slots of different heights ─────────────────────────────────────────────
+// Leave empty for slots that are all the same, as set by drawer_slots above.
+// Otherwise one weight per slot, bottom to top — relative, like the compartment
+// weights, and always filling the box:
+//
+//   slot_weights = [1, 1, 2];     // two ordinary slots, then a double one
+//   slot_weights = [2, 1, 1, 1];  // a tall one at the bottom
+//
+// Set drawer_for_slot above to say which of them you are printing a drawer for.
+slot_weights = [];
+
 // Effective bin height: given, or half the box.
 bin_height_eff = bin_height > 0 ? bin_height : height_units * UNIT_H / 2;
 
-// Slot clearance and matching drawer height that follow from the slot count.
-slot_clear_h = pocket_height_of(height_units, drawer_slots);
+// The slots of the box: equal, or the weights given in slot_weights.
+slots        = len(slot_weights) > 0 ? slot_weights : drawer_slots;
+slot_hs      = box_slot_heights(height_units, slots);
+// Which slot a drawer is being made for (clamped to what the box has).
+slot_i       = min(max(drawer_for_slot, 1), len(slot_hs)) - 1;
+slot_clear_h = slot_hs[slot_i];
 drawer_h     = drawer_height_mm > 0 ? drawer_height_mm
-                                    : drawer_height_of(height_units, drawer_slots);
+                                    : slot_clear_h - DRAWER_CLEARANCE_H;
 
 if (part == "label")
     echo(str("label plates: ", len(label_texts), ", each ",
              label_window_h(drawer_h), " mm tall"));
 if (part == "demo" || part == "box" || part == "drawer")
-    echo(str("drawer slots: ", drawer_slots, "   slot clearance: ", slot_clear_h,
-             " mm   drawer height: ", drawer_h, " mm"));
+    echo(len(slot_hs) > 1 && min(slot_hs) < max(slot_hs) - 0.001
+         ? str("slots (bottom to top): ", slot_hs,
+               " mm — drawers: ", [for (h = slot_hs) h - DRAWER_CLEARANCE_H],
+               " mm. This drawer is for slot ", slot_i + 1,
+               ", so ", drawer_h, " mm tall.")
+         : str("drawer slots: ", len(slot_hs), "   slot clearance: ",
+               slot_clear_h, " mm   drawer height: ", drawer_h, " mm"));
 if (part == "box_bin")
     echo(bin_drawer_slots > 0
          ? str("bin height ", bin_height_eff, " mm, with ", bin_drawer_slots,
@@ -145,7 +168,7 @@ if (part == "box_bin")
 
 // ─── Part selection ──────────────────────────────────────────────────────────
 if (part == "box")
-    box(width_units, depth_units, height_units, drawer_slots, true,
+    box(width_units, depth_units, height_units, slots, true,
         slots_on_every_unit);
 else if (part == "drawer")
     drawer(width_units, depth_units, cols = compartments_across,
@@ -155,7 +178,10 @@ else if (part == "drawer")
 else if (part == "box_bin")
     box_drawer_bin(width_units, depth_units, height_units,
                    bin_drawer_slots > 0 ? 1 : 0,   // unused when shelf_z given
-                   bin_drawer_slots,
+                   // slot_weights applies below the bin as well, as long as
+                   // there are drawers there at all
+                   bin_drawer_slots > 0 && len(slot_weights) > 0
+                       ? slot_weights : bin_drawer_slots,
                    slots_on_every_unit,
                    slot_length_mm > 0 ? slot_length_mm : undef,
                    true, bin_lip_height,
@@ -178,13 +204,13 @@ else if (part == "demo")                 demo_box_with_drawers();
 // Preview: a box filled with drawers, one pulled out.
 module demo_box_with_drawers() {
     W = width_units * UNIT_L;
-    box(width_units, depth_units, height_units, drawer_slots, true,
+    box(width_units, depth_units, height_units, slots, true,
         slots_on_every_unit);
-    out = floor(drawer_slots / 2);   // which drawer is pulled out
-    for (i = [0 : drawer_slots - 1])
-        translate([W/2, i == out ? -45 : 0,
-                   WALL_FLOOR + i * (slot_clear_h + RAIL_T)])
-            drawer(width_units, depth_units, h = drawer_h,
+    out = floor(len(slot_hs) / 2);   // which drawer is pulled out
+    for (i = [0 : len(slot_hs) - 1])
+        translate([W/2, i == out ? -45 : 0, slot_bottom(slot_hs, i)])
+            drawer(width_units, depth_units,
+                   h = slot_hs[i] - DRAWER_CLEARANCE_H,
                    cols = compartments_across, rows = compartments_deep,
                    div_t = divider_thickness, handle = handle,
                    layout = drawer_layout, layout_dir = drawer_layout_dir,

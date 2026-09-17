@@ -21,6 +21,7 @@ build box_1x1x1_4slots      'box(1, 1, 1);'
 build box_2x2x1_4slots      'box(2, 2, 1);'
 build box_2x2x2_4slots      'box(2, 2, 2, 4);'
 build box_2x2x2_drawers_and_bin 'box_drawer_bin(2, 2, 2, 1, 2);'
+build box_2x2x2_mixed_slots     'box(2, 2, 2, [1, 1, 2]);'
 
 # Drawers (match the slots above)
 build drawer_2x2x1_plain            'drawer(2, 2, h = 16.20);'

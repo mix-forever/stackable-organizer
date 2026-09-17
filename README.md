@@ -42,6 +42,7 @@ and **commercial use is not permitted**.
 | ![Mixed compartments](images/drawer_layouts.png) **Mixed compartments** — a different split per column | ![Box with a bin](images/box_bin.png) **Drawers plus an open bin** |
 | ![Bin variants](images/bin_variants.png) **Deep bin with a roof vs. shallow open shelf** | ![Drawer slot cutaway](images/box_interior.png) **Inside a slot** — rails and the anti-fallout catches |
 | ![Two boxes joined](images/stacking.png) **Two boxes joined** with connector clips | ![Label pocket](images/labels.png) **Label pocket** — printed plates slide in |
+| ![Slots of different heights](images/mixed_slots.png) **Slots of different heights** in one box | |
 
 ![Connector clips](images/connector.png)
 
@@ -92,6 +93,7 @@ Everything is set in `presets.scad`.
 |---|---|
 | `drawer_slots` | How many drawer slots the box has **in total**. The drawer height follows automatically. |
 | `drawer_height_mm` | Override the drawer height. Leave `0` to derive it from the slot count. |
+| `drawer_for_slot` | Which slot this drawer is for, from the bottom. Only matters when the slots differ — see below. |
 
 For a box one unit tall:
 
@@ -100,6 +102,33 @@ For a box one unit tall:
 | 4 | 16.50 mm | **16.20 mm** |
 | 2 | 33.96 mm | 33.66 mm |
 | 1 | 68.88 mm | 68.58 mm |
+
+#### Slots of different heights
+
+Two shallow slots for resistors and one deep one for potentiometers, in the
+same box: set **`slot_weights`** in `presets.scad` — one weight per slot,
+bottom to top.
+
+```scad
+slot_weights = [1, 1, 2];   // two ordinary slots, then one twice as tall
+```
+
+![A box with slots of different heights](images/mixed_slots.png)
+
+The weights are relative and always fill the box, exactly like the compartment
+weights in a drawer, so you never work out the millimetres yourself. Leave the
+list empty for slots that are all the same.
+
+Because the slots now differ, a drawer has to know which one it is for: set
+**`drawer_for_slot`** (counted from the bottom). The console prints the whole
+table, so you can see what to print for each:
+
+```
+slots (bottom to top): [35.4, 35.4, 70.8] mm — drawers: [35.1, 35.1, 70.5] mm.
+This drawer is for slot 3, so 70.5 mm tall.
+```
+
+It works for the drawer section of a box with a bin as well.
 
 ### Drawer
 

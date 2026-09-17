@@ -86,14 +86,17 @@ module box_dovetails(ul, ud, uh, per_unit = true, len_override = undef,
 }
 
 // ─── Box body ────────────────────────────────────────────────────────────────
-// `pockets` — TOTAL number of drawer slots in the box (not per unit).
-//   Defaults to 4·uh, i.e. four slots per grid unit.
-//   Slot clearance and matching drawer height come from pocket_height_of()
-//   and drawer_height_of() in params.scad.
+// `pockets` — the drawer slots of the box. A number means that many equal
+//   slots (the default is 4·uh, four per grid unit); a list of weights means
+//   slots of different heights, e.g. [1,1,2] for a tall one on top.
+//   Matching drawer heights: drawer_heights_of(uh, pockets).
 module box(ul = 1, ud = 1, uh = 1, pockets = undef, rails = true,
            per_unit_dovetails = true) {
-    np = is_undef(pockets) ? 4 * uh : pockets;
-    ph = pocket_height_of(uh, np);
+    hs = box_slot_heights(uh, is_undef(pockets) ? 4 * uh : pockets);
+    np = len(hs);
+    assert(min(hs) > 0, "box: a slot came out with no height — check the weights");
+    assert(abs(slot_bottom(hs, np - 1) + hs[np - 1] + WALL_TOP - uh * UNIT_H) < 1e-6,
+           "box: the slots do not add up to the height of the box");
     W = ul * UNIT_L;  D = ud * UNIT_D;  H = uh * UNIT_H;
     // Interior cavity.
     cx0 = WALL_SIDE;  cx1 = W - WALL_SIDE;
@@ -125,17 +128,15 @@ module box(ul = 1, ud = 1, uh = 1, pockets = undef, rails = true,
 
     // Drawer rails: np-1 pairs, on the slot boundaries.
     if (rails && np > 1)
-        for (i = [1 : np - 1]) {
-            z = WALL_FLOOR + i * ph + (i - 1) * RAIL_T;
-            rail_pair(W, cy1 - cy0 - RAIL_BACK_GAP, z, cx0, cx1, cy0);
-        }
+        for (i = [0 : np - 2])
+            rail_pair(W, cy1 - cy0 - RAIL_BACK_GAP,
+                      slot_bottom(hs, i) + hs[i], cx0, cx1, cy0);
 
     // Anti-fallout catches: one per drawer slot — under every rail and under
     // the ceiling (for the topmost drawer).
     if (rails)
-        for (i = [1 : np]) {
-            z = (i < np) ? WALL_FLOOR + i * ph + (i - 1) * RAIL_T
-                         : H - WALL_TOP;
+        for (i = [0 : np - 1]) {
+            z = (i < np - 1) ? slot_bottom(hs, i) + hs[i] : H - WALL_TOP;
             for (m = [0, 1])
                 translate([m ? cx1 : cx0, cy0, z])
                     mirror([m ? 1 : 0, 0, 0]) rail_stop();
@@ -239,6 +240,30 @@ module drawer_notches(cw, bl, bh) {
                    bh - DRAWER_NOTCH_DEPTH])
             cube([DRAWER_NOTCH_W, bl + 2*EPS, DRAWER_NOTCH_DEPTH + EPS]);
 }
+
+// ─── Slot heights ────────────────────────────────────────────────────────────
+// `slots` is either a count — every slot the same — or a list of weights, the
+// same idiom as the drawer layout: [1,1,2] is three slots, the top one twice
+// as tall. The weights are relative and always fill the box.
+function slot_weight_list(slots) =
+    is_list(slots) ? slots : [for (i = [1 : max(slots, 1)]) 1];
+
+// Slot heights, bottom to top, filling `space` minus the rails between them.
+function slot_heights_in(space, slots) =
+    let (w = slot_weight_list(slots), free = space - (len(w) - 1) * RAIL_T)
+    [for (x = w) free * x / wsum(w)];
+
+// The slots of a box uh units tall.
+function box_slot_heights(uh, slots) =
+    slot_heights_in(uh * UNIT_H - WALL_FLOOR - WALL_TOP, slots);
+
+// Drawer heights to match them.
+function drawer_heights_of(uh, slots) =
+    [for (h = box_slot_heights(uh, slots)) h - DRAWER_CLEARANCE_H];
+
+// Floor of slot i (0-based), measured from the bottom of the box.
+function slot_bottom(hs, i, z = WALL_FLOOR, k = 0) =
+    k >= i ? z : slot_bottom(hs, i, z + hs[k] + RAIL_T, k + 1);
 
 // Drawer dimensions that other parts need too — the label plates have to know
 // how wide a pocket window is without building a drawer first.
@@ -492,8 +517,10 @@ module box_drawer_bin(ul = 2, ud = 2, uh = 2, uh_drawers = 1, pockets = 2,
     // The lip may not exceed BIN_LIP_MAX_FRAC of the bin height.
     lip = min(bin_lip_h, BIN_LIP_MAX_FRAC * (H - zst));
 
-    ph  = has_dr && pockets > 0
-        ? (zsb - WALL_FLOOR - (pockets - 1) * RAIL_T) / pockets : 0;
+    // Slots below the bin — a count or a list of weights, as in box().
+    npk = is_list(pockets) ? len(pockets) : pockets;
+    hs  = has_dr && npk > 0 ? slot_heights_in(zsb - WALL_FLOOR, pockets) : [];
+    ph  = len(hs) > 0 ? min(hs) : 0;
 
     if (zst < zst_req - 0.001)
         echo(str("box_drawer_bin: shelf moved from ", zst_req, " to ", zst,
@@ -501,7 +528,7 @@ module box_drawer_bin(ul = 2, ud = 2, uh = 2, uh_drawers = 1, pockets = 2,
     if (lip < bin_lip_h - 0.001)
         echo(str("box_drawer_bin: lip trimmed from ", bin_lip_h, " to ", lip,
                  " (max ", BIN_LIP_MAX_FRAC, " of the bin height)"));
-    if (has_dr && pockets > 0 && ph < 8)
+    if (has_dr && npk > 0 && ph < 8)
         echo(str("WARNING box_drawer_bin: drawer slot is only ", ph,
                  " mm — use fewer drawers or a taller box"));
 
@@ -598,14 +625,13 @@ module box_drawer_bin(ul = 2, ud = 2, uh = 2, uh_drawers = 1, pockets = 2,
     translate([cx0, 0, 0]) bin_ramp(cx1 - cx0, zst, lip);
 
     // rails and catches in the drawer section
-    if (rails && has_dr && pockets > 0) {
-        if (pockets > 1)
-            for (i = [1 : pockets - 1])
+    if (rails && has_dr && npk > 0) {
+        if (npk > 1)
+            for (i = [0 : npk - 2])
                 rail_pair(W, cy1 - WALL_FRONT - RAIL_BACK_GAP,
-                          WALL_FLOOR + i * ph + (i - 1) * RAIL_T,
-                          cx0, cx1, WALL_FRONT);
-        for (i = [1 : pockets]) {
-            z = (i < pockets) ? WALL_FLOOR + i * ph + (i - 1) * RAIL_T : zsb;
+                          slot_bottom(hs, i) + hs[i], cx0, cx1, WALL_FRONT);
+        for (i = [0 : npk - 1]) {
+            z = (i < npk - 1) ? slot_bottom(hs, i) + hs[i] : zsb;
             for (m = [0, 1])
                 translate([m ? cx1 : cx0, WALL_FRONT, z])
                     mirror([m ? 1 : 0, 0, 0]) rail_stop();
