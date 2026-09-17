@@ -1,0 +1,164 @@
+// ═══════════════════════════════════════════════════════════════════════════
+//  Parametric Stackable Organizer  —  OPEN THIS FILE
+//
+//  1. Open this file in OpenSCAD
+//  2. Window → Customizer  (or edit the values below)
+//  3. F5 preview · F6 render · F7 export STL
+//
+//  Derivative work, CC BY-NC. Original design by termlimit, based on STTrife:
+//  https://www.thingiverse.com/thing:3873672
+// ═══════════════════════════════════════════════════════════════════════════
+
+include <organizer.scad>
+
+/* [What to generate] */
+// Part to build
+part = "demo"; // [demo:Preview — box with drawers, box:Box with drawer slots, box_bin:Box with drawers and open bin, drawer:Drawer, connector:Connector clip, connector_tolerant:Connector clip (loose fit)]
+
+/* [Size] */
+// Width, in grid units of 73.06 mm
+width_units = 2;   // [1, 2, 2.5, 3]
+// Depth, in grid units of 67.20 mm
+depth_units = 2;   // [1, 2]
+// Height, in grid units of 74.64 mm (boxes only)
+height_units = 1;  // [1, 2, 3, 4]
+
+/* [Drawer slots in the box] */
+// How many drawer slots the box has in total. Drawer height follows
+// automatically: 4 slots → 16.20 mm drawers, 2 → 33.66 mm, 1 → 68.58 mm
+// (for a box one unit tall).
+drawer_slots = 4;  // [1:1:8]
+// Drawer height in mm. Leave 0 to derive it from the slot count (recommended).
+drawer_height_mm = 0;
+
+/* [Drawer] */
+// Number of compartments across the width
+compartments_across = 3;  // [1:1:8]
+// Number of compartments front to back
+compartments_deep = 2;    // [1:1:6]
+// Divider thickness in mm. 1.92 gives sturdy dividers; 1.20 is slimmer and
+// leaves more usable space when you want many compartments.
+divider_thickness = 1.92;
+// Pull handle under the drawer front
+handle = true;
+// For compartments that are NOT all the same, leave the two settings above
+// alone and edit `drawer_layout` further down this file — the Customizer
+// cannot show a list of lists, so it lives in the text.
+
+
+/* [Connector slots] */
+// Put slots on every grid unit, so any box can clip anywhere on the grid.
+// Turn off for slots only along the outer edges.
+slots_on_every_unit = true;
+// Slot length in mm. Leave 0 for the standard 46.80 mm measured from the back.
+slot_length_mm = 0;
+
+/* [Open bin] */
+// Bin height in mm, measured from the bin floor to the top of the box.
+// 0 = half the box height, which gives a balanced split.
+// Ignored when the bin has no drawers below it — then it fills the whole box.
+bin_height = 0;
+// Drawer slots below the bin. 0 = bin only, no drawers and no shelf.
+bin_drawer_slots = 2;  // [0:1:6]
+// Height of the front lip that keeps the contents in. Trimmed automatically
+// if it would not fit the bin.
+bin_lip_height = 28.56;
+// Bin front panel flush with the face of the box.
+// Turn off to recess it behind the front frame.
+bin_front_flush = true;
+// Roof over the back of the bin. Auto keeps it only when the box is deep
+// enough to be useful — a one-unit-deep bin becomes an open shelf.
+bin_roof = "auto"; // [auto, yes, no]
+
+/* [Hidden] */
+$fn = 64;
+
+// ─── Compartments that are not a plain grid ─────────────────────────────────
+// Leave empty to use compartments_across × compartments_deep above.
+//
+// Otherwise: one entry per column, front to back, written as
+// [width weight, [row weights]]. The weights are relative and always fill the
+// drawer, so [1,2,1] and [10,20,10] mean the same thing. A plain number is
+// shorthand for a standard-width column with that many equal rows.
+//
+//   drawer_layout = [ [1, [1,1]],       // 2 equal rows
+//                     [2, [1]],         // twice as wide, undivided
+//                     [1, [1,2,1]] ];   // 3 rows, middle one twice as deep
+//
+//   drawer_layout = [2, 1, 3];          // 3 columns of 2, 1 and 3 rows
+//
+//   drawer_layout = [ [3, [1,1]], [1, [1,1,1,1]] ];
+//                     // a wide half in 2 rows, a narrow half in 4
+drawer_layout = [];
+
+// Which way the layout is read:
+//   "cols" — columns, each with its own rows   (the drawing above)
+//   "rows" — bands across the drawer, each with its own columns; the first
+//            weight is then the depth of the band
+//
+//   drawer_layout = [ [1,[1,1]], [1,[1]], [1,[1,1,1]] ];
+//   drawer_layout_dir = "rows";   // 3 bands: 2 columns, none, 3 columns
+drawer_layout_dir = "cols";
+
+// Effective bin height: given, or half the box.
+bin_height_eff = bin_height > 0 ? bin_height : height_units * UNIT_H / 2;
+
+// Slot clearance and matching drawer height that follow from the slot count.
+slot_clear_h = pocket_height_of(height_units, drawer_slots);
+drawer_h     = drawer_height_mm > 0 ? drawer_height_mm
+                                    : drawer_height_of(height_units, drawer_slots);
+
+if (part == "demo" || part == "box" || part == "drawer")
+    echo(str("drawer slots: ", drawer_slots, "   slot clearance: ", slot_clear_h,
+             " mm   drawer height: ", drawer_h, " mm"));
+if (part == "box_bin")
+    echo(bin_drawer_slots > 0
+         ? str("bin height ", bin_height_eff, " mm, with ", bin_drawer_slots,
+               " drawer slots below")
+         : str("bin only, fills the box — height ",
+               height_units * UNIT_H - WALL_FLOOR,
+               " mm (bin_height ignored)"));
+// The module reports any further bin adjustments (trimmed lip, moved shelf).
+
+// ─── Part selection ──────────────────────────────────────────────────────────
+if (part == "box")
+    box(width_units, depth_units, height_units, drawer_slots, true,
+        slots_on_every_unit);
+else if (part == "drawer")
+    drawer(width_units, depth_units, cols = compartments_across,
+           rows = compartments_deep, div_t = divider_thickness,
+           h = drawer_h, handle = handle, layout = drawer_layout,
+           layout_dir = drawer_layout_dir);
+else if (part == "box_bin")
+    box_drawer_bin(width_units, depth_units, height_units,
+                   bin_drawer_slots > 0 ? 1 : 0,   // unused when shelf_z given
+                   bin_drawer_slots,
+                   slots_on_every_unit,
+                   slot_length_mm > 0 ? slot_length_mm : undef,
+                   true, bin_lip_height,
+                   // Bin height converted to the shelf position. With no
+                   // drawers there is no shelf — the bin sits on the floor.
+                   bin_drawer_slots > 0
+                       ? height_units * UNIT_H - bin_height_eff
+                         - BIN_SHELF_BELOW - BIN_SHELF_ABOVE
+                       : undef,
+                   bin_front_flush,
+                   bin_roof == "yes" ? true : bin_roof == "no" ? false : undef);
+else if (part == "connector")            connector();
+else if (part == "connector_tolerant")   connector(true);
+else if (part == "demo")                 demo_box_with_drawers();
+
+// Preview: a box filled with drawers, one pulled out.
+module demo_box_with_drawers() {
+    W = width_units * UNIT_L;
+    box(width_units, depth_units, height_units, drawer_slots, true,
+        slots_on_every_unit);
+    out = floor(drawer_slots / 2);   // which drawer is pulled out
+    for (i = [0 : drawer_slots - 1])
+        translate([W/2, i == out ? -45 : 0,
+                   WALL_FLOOR + i * (slot_clear_h + RAIL_T)])
+            drawer(width_units, depth_units, h = drawer_h,
+                   cols = compartments_across, rows = compartments_deep,
+                   div_t = divider_thickness, handle = handle,
+                   layout = drawer_layout, layout_dir = drawer_layout_dir);
+}

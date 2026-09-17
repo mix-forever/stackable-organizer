@@ -1,0 +1,22 @@
+# OpenSCAD
+*.csg
+*.deps
+
+# Exports made while working — the curated examples live in stl/
+/*.stl
+/*.3mf
+/*.pdf
+/*.png
+
+# Customizer scratch state — it stores whatever values were last set in the
+# GUI, so it is the user's working state, not a curated set of presets.
+/presets.json
+
+# Scratch files
+tmp.scad
+_t.scad
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
