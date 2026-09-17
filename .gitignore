@@ -12,6 +12,16 @@
 # GUI, so it is the user's working state, not a curated set of presets.
 /presets.json
 
+# stl/ holds the generated examples, which are named in tools/build_examples.sh.
+# Anything else you export there — your own sizes, your own names — stays out of
+# the repository. If an example ever stops matching these patterns, the "examples
+# are up to date" check in CI fails, so nothing goes missing quietly.
+stl/*
+!stl/box_*.stl
+!stl/drawer_*.stl
+!stl/connector*.stl
+!stl/label_*.stl
+
 # Scratch files
 tmp.scad
 _t.scad
