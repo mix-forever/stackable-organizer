@@ -18,6 +18,11 @@ This is a derivative work. The original design is not mine:
   https://www.thingiverse.com/thing:3873672
 - based on the original storage box by **STTrife**
 
+The parametric rebuild in this repository was written by me together with
+**Claude Code** — Anthropic's Claude in the terminal. The measurements, the
+design decisions and the test prints are mine; the code was written in
+dialogue with it, and every commit carries a `Co-Authored-By` line to say so.
+
 Licence: **Creative Commons — Attribution — NonCommercial (CC BY-NC)**,
 inherited from the original. Attribution to termlimit and STTrife is required,
 and **commercial use is not permitted**.
